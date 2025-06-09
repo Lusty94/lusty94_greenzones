@@ -48,6 +48,10 @@ function sendLog(source, logType, message, level)
             }}
         }), { ['Content-Type'] = 'application/json' })
     elseif logging == 'fm-logs' then
+        if not GetResourceState('fm-logs') or GetResourceState('fm-logs') ~= 'started' then
+            print('^1| Lusty94_GreenZones | DEBUG | ERROR | Unable to send log | fm-logs is not started!')
+            return
+        end
         exports['fm-logs']:createLog({
             LogType = logType or "Player",
             Message = message or 'Check Resource',
