@@ -4,6 +4,8 @@ local Zones = {}
 local currentZone = nil
 local timer = 0
 local playerPed = PlayerPedId()
+local isExempt = false
+
 
 --client debug print
 function CLDebug(msg)
@@ -53,16 +55,20 @@ end
 function ignoreRestrictions(zoneName)
     local player = QBCore.Functions.GetPlayerData()
     if not player then return false end
-    local ignore = Config.Greenzones.Zones[zoneName] and Config.Greenzones.Zones[zoneName].ignore
+    local ignore = Config.GreenZones[zoneName] and Config.GreenZones[zoneName].ignore
     if not ignore then return false end
+    for _, perm in pairs(ignore.staff or {}) do
+        local hasPerm = lib.callback.await('lusty94_greenzone:hasStaffPerm', false, perm)
+        if hasPerm then
+            CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Ignoring Zone Restrictions | '..perm:upper())
+            return true
+        end
+    end
     for _, job in pairs(ignore.jobs or {}) do
-        if player.job and player.job.name == job then CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Ignoring Zone Restrictions | Job: '..job) return true end
+        if player.job and player.job.name == job then CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Ignoring Zone Restrictions | '..job:upper()) return true end
     end
     for _, gang in pairs(ignore.gangs or {}) do
-        if player.gang and player.gang.name == gang then CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Ignoring Zone Restrictions | Gang: '..gang) return true end
-    end
-    for _, perm in pairs(ignore.staff or {}) do
-        if QBCore.Functions.HasPermission(perm) then CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Ignoring Zone Restrictions | Staff Perm: '..perm) return true end
+        if player.gang and player.gang.name == gang then CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Ignoring Zone Restrictions | '..gang:upper()) return true end
     end
     return false
 end
@@ -75,27 +81,29 @@ function enterZone(zoneName)
     currentZone = zoneName
     TriggerServerEvent('lusty94_greenzone:enterZone', zoneName)
     local allowed = lib.callback.await('lusty94_greenzone:isInZone', false)
-    if not allowed then resetZoneEffects() return end
+    if not allowed then resetZoneEffects() isExempt = false return end
+    CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Entered Zone | '..zoneName:upper())
     local zoneData = Zones[zoneName]
     applyStates(zoneData.states)
-    if ignoreRestrictions(zoneName) then
+    isExempt = ignoreRestrictions(zoneName)
+    if isExempt then
         CLNotify(Config.Language.Notifications.Exempt, 'success')
-        CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Player is exempt from restrictions in zone: '..zoneName)
+        CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Exempt From Zone Restrictions | '..zoneName:upper())
         return
     end
     applyRestrictions(zoneData.restrictions)
     CLNotify(Config.Language.Notifications.EnteredZone, 'success')
-    CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Player has entered zone: '..zoneName)
 end
 
 
 --exit zone
 function exitZone(zoneName)
     currentZone = nil
+    isExempt = false
     TriggerServerEvent('lusty94_greenzone:exitZone')
     resetZoneEffects()
     CLNotify(Config.Language.Notifications.LeftZone, 'success')
-    CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Player has left zone: '..tostring(zoneName))
+    CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Left Zone | '..tostring(zoneName):upper())
 end
 
 
@@ -103,10 +111,11 @@ end
 function applyStates(states)
     if states.invincible then SetEntityInvincible(playerPed, true) end
     if states.noRagdoll then SetPedCanRagdoll(playerPed, false) end
-    if states.invisible then SetEntityVisible(playerPed, false, false) end
-    if states.resetHealth then SetEntityHealth(playerPedId(), 100) end
+    if states.invisible then SetEntityAlpha(playerPed, 100, false) end
+    if states.resetHealth then SetEntityHealth(playerPed, GetEntityHealth(playerPed) + 200) end
     if states.resetStress then TriggerServerEvent(Config.CoreSettings.EventNames.Stress, 100) end
-    CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | States applied '..json.encode(states))
+    if states.resetHunger or states.resetThirst then TriggerServerEvent('lusty94_greenzones:server:ResetNeeds', states.resetHunger or false, states.resetThirst or false) end
+    CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | States Applied | '..json.encode(states))
 end
 
 
@@ -114,22 +123,23 @@ end
 function resetZoneEffects()
     SetEntityInvincible(playerPed, false)
     SetPedCanRagdoll(playerPed, true)
-    SetEntityVisible(playerPed, true, false)
+    SetEntityAlpha(playerPed, 255, false)
     for _, control in ipairs({24, 257, 69, 70, 92, 114, 331, 157, 158, 159, 160, 161, 162, 163, 164, 165}) do
         EnableControlAction(0, control, true)
     end
     LockInventory(false)
-    CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Zone effects reset')
+    CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Zone Effects Reset')
 end
 
 
 --apply restrictions
 function applyRestrictions(restrictions)
-    CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Restrictions applied '..json.encode(restrictions))
+    if isExempt then return end
+    CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Restrictions Applied | '..json.encode(restrictions))
     if restrictions.lockInventory then LockInventory(true) end
     if restrictions.disarm then
         SetCurrentPedWeapon(playerPed, GetHashKey('WEAPON_UNARMED'), true)
-        CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Player disarmed')
+        CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Weapon Disarmed')
     end
 end
 
@@ -137,7 +147,7 @@ end
 --disable controls
 CreateThread(function()
     while true do
-        if currentZone then
+        if currentZone and not isExempt then
             local restrictions = Zones[currentZone].restrictions
             if restrictions.melee then DisablePlayerFiring(playerPed, true) end
             if restrictions.shooting then
@@ -153,7 +163,7 @@ CreateThread(function()
                 DisableControlAction(0, 114, true)
                 DisableControlAction(0, 331, true)
             end
-            if restrictions.disarm then
+            if restrictions.disarm and not isExempt then
                 if GetSelectedPedWeapon(playerPed) ~= GetHashKey('WEAPON_UNARMED') then
                     SetCurrentPedWeapon(playerPed, GetHashKey('WEAPON_UNARMED'), true)
                 end
@@ -175,20 +185,25 @@ end)
 
 --create zones
 CreateThread(function()
-    for zoneName, data in pairs(Config.Greenzones.Zones) do
+    for zoneName, zoneData in pairs(Config.GreenZones) do
+        local info = zoneData.info
         Zones[zoneName] = {
-            restrictions = data.restrictions or {},
-            states = data.states or {},
+            restrictions = zoneData.restrictions or {},
+            states = zoneData.states or {},
+            ignore = zoneData.ignore or {},
             zone = lib.zones.sphere({
-                coords = data.info.coords,
-                radius = data.info.radius or 50,
-                debug = data.info.debug or false,
-                onEnter = function() enterZone(zoneName) end,
-                onExit = function() exitZone(zoneName) end,
+                coords = info.coords,
+                radius = info.radius or 50,
+                debug = info.debug or false,
+                onEnter = function()
+                    enterZone(zoneName)
+                end,
+                onExit = function()
+                    exitZone(zoneName)
+                end,
             })
         }
-        --CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Creating Zones | Name: '..zoneName:upper()..' | Coords: '..json.encode(data.info.coords)..' | Zone radius: '..data.info.radius)
-        CLDebug(('^3| Lusty94_GreenZones | DEBUG | INFO | Creating Zones | Name %s | Coords %s | Zone Radius %s')):format(zoneName:upper(), json.encode(data.info.coords), data.info.radius)
+        CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Creating Zones |  '..zoneName:upper()..' | '..zoneData.info.radius..' | '..json.encode(zoneData.info.coords))
     end
 end)
 

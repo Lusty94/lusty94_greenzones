@@ -64,17 +64,48 @@ lib.callback.register('lusty94_greenzone:isInZone', function(source)
     if playerZones[source] ~= nil then
         return true
     else
-        SVDebug(('^1| Lusty94_GreenZones | DEBUG | WARNING | Player: %s | Server ID: %d attempted to apply Greenzone effects without being in a valid zone.'):format(getCharacterName(source), source))
-        sendLog(source, "Security", ('Player %s Server ID %s attempted to apply Greenzone effects without being in a valid zone.'):format(getCharacterName(source), source), "warning")
+        SVDebug(('^1| Lusty94_GreenZones | DEBUG | WARNING | %s attempted to apply green zone effects without being in a valid zone'):format(getCharacterName(source)))
         if Config.CoreSettings.Security.DropPlayer then DropPlayer(source, 'Potential Exploiting Detected') end
         return false
     end
 end)
 
 
+--check staff perms
+lib.callback.register('lusty94_greenzone:hasStaffPerm', function(source, perm)
+    return QBCore.Functions.HasPermission(source, perm)
+end)
+
+
 --enter zone
 RegisterNetEvent('lusty94_greenzone:enterZone', function(zoneName)
     playerZones[source] = zoneName
+end)
+
+
+--reset hunger and thirst
+RegisterNetEvent('lusty94_greenzones:server:ResetNeeds', function(resetHunger, resetThirst)
+    local Player = QBCore.Functions.GetPlayer(source)
+    if not Player then return end
+    local currentZone = playerZones[source]
+    if not currentZone then
+        SVDebug(('^1| Lusty94_GreenZones | SECURITY | %s tried to reset hunger or thirst outside of a valid green zone'):format(getCharacterName(source)))
+        sendLog(source, "Security", ("%s attempted to reset hunger or thirst without being in a valid green zone"):format(getCharacterName(source)), "warning")
+        if Config.CoreSettings.Security.DropPlayer then DropPlayer(source, 'Potential Exploiting Detected') end
+        return
+    end
+    local newHunger = Player.PlayerData.metadata['hunger']
+    local newThirst = Player.PlayerData.metadata['thirst']
+    if resetHunger then
+        newHunger = 100
+        Player.Functions.SetMetaData('hunger', newHunger)
+    end
+    if resetThirst then
+        newThirst = 100
+        Player.Functions.SetMetaData('thirst', newThirst)
+    end
+    TriggerClientEvent('hud:client:UpdateNeeds', source, newHunger, newThirst)
+    SVDebug(('^3| Lusty94_GreenZones | DEBUG | INFO | Reset hunger and thirstfor %s in green zone %s'):format(getCharacterName(source), currentZone))
 end)
 
 
@@ -98,7 +129,7 @@ AddEventHandler('onResourceStop', function(resource)
 end)
 
 
---dont touch
+--version check
 local function CheckVersion()
     PerformHttpRequest('https://raw.githubusercontent.com/Lusty94/UpdatedVersions/main/GreenZones/version.txt', function(err, newestVersion, headers)
         local currentVersion = GetResourceMetadata(GetCurrentResourceName(), 'version')
