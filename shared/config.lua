@@ -23,7 +23,7 @@ Config.CoreSettings = {
     Security = {
         DropPlayer = true, -- set to true to kick the player if they fail security checks
         Logs = {
-            Enabled = false, -- enable logs for events with detailed information
+            Enabled = true, -- enable logs for events with detailed information
             Type = 'fm-logs', -- type of logging, support for fm-logs(preferred) or discord webhook (not recommended)
             --use 'fm-logs' for fm-logs (if using this ensure you have setup the resource correctly and it is started before this script)
             --use 'discord' for discord webhooks (if using this make sure to set your webhook URL in the sendLog function in greenzones_server.lua)
@@ -34,7 +34,7 @@ Config.CoreSettings = {
     }, 
     Notify = { -- notification type - support for qb-core notify okokNotify, mythic_notify, ox_lib notify and qs-notify (experimental not tested)
         --EDIT CLIENT/GREENZONES_CLIENT.LUA TO ADD YOUR OWN NOTIFY SUPPORT
-        Type = 'ox',
+        Type = 'qb',
         --use 'qb' for default qb-core notify
         --use 'okok' for okokNotify
         --use 'mythic' for mythic_notify
