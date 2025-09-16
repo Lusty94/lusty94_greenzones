@@ -9,10 +9,9 @@ Config = {}
 --╚══════╝░╚═════╝░╚═════╝░░░░╚═╝░░░░░░╚═╝░░░░╚════╝░░░░░░╚═╝
 --
 
+
 -- Thank you for downloading this script!
-
 -- Below you can change multiple options to suit your server needs.
-
 -- Extensive documentation detailing this script and how to confiure it correclty can be found here: https://lusty94-scripts.gitbook.io/documentation/free/green-zones
 
 
@@ -32,14 +31,15 @@ Config.CoreSettings = {
     EventNames = {
         Stress = 'hud:server:RelieveStress', -- name of event to releive stress - default is 'hud:server:RelieveStress'
     }, 
-    Notify = { -- notification type - support for qb-core notify okokNotify, mythic_notify, ox_lib notify and qs-notify (experimental not tested)
-        --EDIT CLIENT/GREENZONES_CLIENT.LUA TO ADD YOUR OWN NOTIFY SUPPORT
+    Notify = { -- notification settings - support for qb-core notify okokNotify, mythic_notify, ox_lib notify, lation_ui and wasabi_notify
+        --EDIT CLIENT/GREENZONES_CLIENT.LUA & SERVER/GREENZONES_SERVER.LUA TO ADD YOUR OWN NOTIFY SUPPORT
         Type = 'qb',
         --use 'qb' for default qb-core notify
         --use 'okok' for okokNotify
         --use 'mythic' for mythic_notify
         --use 'ox' for ox_lib notify
-        --use 'qs' for qs-notify (experimental not tested) (qs-interface)  -- some logic might need adjusting
+        --use 'lation' for lation_ui
+        --use 'wasabi' for wasabi_notify
         --use 'custom' for custom notifications
     },
 }
@@ -130,7 +130,7 @@ Config.GreenZones = {
 Config.Language = {
     Notifications = {
         Exempt = 'You have entered a green zone but are exempt from restrictions',
-        EnteredZone = 'You have entered a green zone!',
-        LeftZone = 'You have left a green zone!',
+        EnteredZone = 'You have entered a green zone',
+        LeftZone = 'You have left a green zone',
     },
 }

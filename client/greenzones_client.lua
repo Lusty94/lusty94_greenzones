@@ -16,11 +16,11 @@ end
 
 --client notification
 function CLNotify(msg,type,time,title)
-    if NotifyType == nil then print('^1| Lusty94_GreenZones | DEBUG | ERROR | NotifyType is nil!') return end
-    if not title then title = 'Green Zone' end
-    if not time then time = 5000 end
-    if not type then type = 'success' end
+    if NotifyType == nil then print('^1| Lusty94_GreenZones | DEBUG | ERROR: NotifyType is nil!') return end
     if not msg then msg = 'Notification sent with no message!' end
+    if not type then type = 'success' end
+    if not time then time = 5000 end
+    if not title then title = 'Notification' end
     if NotifyType == 'qb' then
         QBCore.Functions.Notify(msg,type,time)
     elseif NotifyType == 'okok' then
@@ -28,26 +28,29 @@ function CLNotify(msg,type,time,title)
     elseif NotifyType == 'mythic' then
         exports['mythic_notify']:DoHudText(type, msg)
     elseif NotifyType == 'ox' then
-        lib.notify({ title = title, description = msg, position = 'top', type = type, duration = time})
-    elseif NotifyType == 'qs' then
-        exports['qs-interface']:AddNotify(msg, title, time, 'fa-solid fa-clipboard')
+        lib.notify({title = title, description = msg, position = 'top', type = type, duration = time})
+    elseif NotifyType == 'lation' then
+        exports.lation_ui:notify({title = title, message = msg, type = type, duration = time, icon = 'fa-solid fa-clipboard',})
+    elseif NotifyType == 'wasabi' then
+        exports.wasabi_notify:notify(title, msg, time, type)
     elseif NotifyType == 'custom' then
         --insert your custom notification function here
     else
-        print('^1| Lusty94_GreenZones | DEBUG | ERROR | Unknown Notify Type Set In Config.CoreSettings.Notify.Type! '..tostring(NotifyType))
+        print('^1| Lusty94_GreenZones | DEBUG | ERROR: Unknown Notify Type Set In Config.CoreSettings.Notify.Type | '..tostring(NotifyType))
     end
 end
 
 
 --lock inventory
+
+--lock inventory to prevent exploits
 function LockInventory(toggle)
 	if toggle then
         LocalPlayer.state:set('inv_busy', true, true)
-        CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Toggling Inventory Lock ON')
     else 
         LocalPlayer.state:set('inv_busy', false, true)
-        CLDebug('^3| Lusty94_GreenZones | DEBUG | INFO | Toggling Inventory Lock OFF')
     end
+    CLDebug(('^3| Lusty94_GreenZones | DEBUG | Info | Inventory Lock | %s'):format(tostring(toggle)))
 end
 
 
